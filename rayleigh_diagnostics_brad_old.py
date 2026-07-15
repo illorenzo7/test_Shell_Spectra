@@ -2375,6 +2375,7 @@ class Shell_Spectra:
     --on the global grid that runs from 1 through N_R.
     """
 
+    print("Brads version of Shell_Spectra")
     def print_info(self):
         """ Prints all metadata associated with the shell-spectra object."""
         print( 'version  : ', self.version)
@@ -2402,18 +2403,13 @@ class Shell_Spectra:
            filename  : The reference state file to read.
            path      : The directory where the file is located (if full path not in filename)
            iterset   : list of timestep indices to read, values running from 0 to niter-1
-           qvset     : list of quantity codes to read
+           iqvset    : list of quantity codes to read
            irset     : list of radial indices, values running from 0 to nr-1
            lset      : list of harmonic degrees, values running from 0 to lmax
            mset      : list of azimuthal orders, values running from 0 to lmax
-
-           --- The lists of requested values (not necessarily python lists) will be sorted,
-               redundant values removed, and converted into numpy arrays.
-           --- If the user asks for data that doesn't exist, they will be warned and the nonexistent
-               request removed from the lists.
-           --- If all of the requested values for a particular keyword are unavailble, an error
-               is thrown and no data is returned.
         """
+        print("Brads version of Shell_Spectra (init)")
+
         if (filename == 'none'):
             the_file = path+'00000001'
         else:
@@ -2456,16 +2452,16 @@ class Shell_Spectra:
         if mset is None: # read all azimuthal orders
             mset = np.arange(mmax+1)
         
-        # make everything an integer array, and make sure they're sorted, and uniquified
-        qvset = np.unique([np.int32(qvset)]) if np.isscalar(qvset) else np.unique(np.int32(qvset))
-        iterset = np.unique([np.int32(iterset)]) if np.isscalar(iterset) else np.unique(np.int32(iterset))
-        irset = np.unique([np.int32(irset)]) if np.isscalar(irset) else np.unique(np.int32(irset))
-        lset = np.unique([np.int32(lset)]) if np.isscalar(lset) else np.unique(np.int32(lset))
-        mset = np.unique([np.int32(mset)]) if np.isscalar(mset) else np.unique(np.int32(mset))
-
+        # make everything an array, and make sure they're sorted
+        qvset = np.unique(np.array([qvset])) if np.isscalar(qvset) else np.unique(np.array(qvset))
+        iterset = np.unique(np.array([iterset])) if np.isscalar(iterset) else np.unique(np.array(iterset))
+        irset = np.unique(np.array([irset])) if np.isscalar(irset) else np.unique(np.array(irset))
+        lset = np.unique(np.array([lset])) if np.isscalar(lset) else np.unique(np.array(lset))
+        mset = np.unique(np.array([mset])) if np.isscalar(mset) else np.unique(np.array(mset))
 
         # remove request items that don't exist in the file
-        error = False                 # Unrecoverable errors?
+        error = False
+
         match = np.isin(qvset, qv)
         nmatch = len(qvset[match])
         if (nmatch == 0):
@@ -2476,8 +2472,7 @@ class Shell_Spectra:
             print(" Available quantity codes: ", qv)
             print("---------------------------------------------------------")
             print(" ")
-            error = True       # No data can be read!
-            qvset = np.array([])
+            error = True
         elif (nmatch < len(qvset)):
             nomatch = np.setdiff1d(qvset, qv)
             print(" ")
@@ -2503,7 +2498,6 @@ class Shell_Spectra:
             print("---------------------------------------------------------")
             print(" ")
             error = True
-            iterset = np.array([])
         elif (nmatch < len(iterset)):
             nomatch = np.setdiff1d(iterset, np.arange(nrec))
             print(" ")
@@ -2525,11 +2519,10 @@ class Shell_Spectra:
             print("---------------------------------------------------------")
             print(" ERROR: Requested radii not found")
             print(" Specified radial indices: ", irset)
-            print(" Available radial indices: ", np.arange(nr))
+            print(" Available iterations: ", np.arange(nr))
             print("---------------------------------------------------------")
             print(" ")
             error = True
-            irset = np.array([])
         elif (nmatch < len(irset)):
             nomatch = np.setdiff1d(irset, np.arange(nr))
             print(" ")
@@ -2537,7 +2530,7 @@ class Shell_Spectra:
             print(" WARNING: One or more radii not found")
             print(" Invalid radial indices requested: ", nomatch)
             print(" Valid radial indices requested: ", irset[match])
-            print(" Available radial indices: ", np.arange(nr))
+            print(" Available quantity codes: ", np.arange(nr))
             print(" ")
             print(" Returning only the radii that were found")
             print("---------------------------------------------------------")
@@ -2551,11 +2544,10 @@ class Shell_Spectra:
             print("---------------------------------------------------------")
             print(" ERROR: Requested harmonic degrees not found")
             print(" Specified degrees: ", lset)
-            print(" Available degrees: ", np.arange(nell))
+            print(" Available iterations: ", np.arange(nell))
             print("---------------------------------------------------------")
             print(" ")
             error = True
-            lset = np.array([])
         elif (nmatch < len(lset)):
             nomatch = np.setdiff1d(lset, np.arange(nell))
             print(" ")
@@ -2581,7 +2573,6 @@ class Shell_Spectra:
             print("---------------------------------------------------------")
             print(" ")
             error = True
-            mset = np.array([])
         elif (nmatch < len(mset)):
             nomatch = np.setdiff1d(mset, np.arange(nm))
             print(" ")
@@ -2589,40 +2580,24 @@ class Shell_Spectra:
             print(" WARNING: One or more azimuthal orders not found")
             print(" Invalid orders requested: ", nomatch)
             print(" Valid orders requested: ", mset[match])
-            print(" Available orders: ", np.arange(nm))
+            print(" Available degrees: ", np.arange(nm))
             print(" ")
             print(" Returning only the orders that were found")
             print("---------------------------------------------------------")
             print(" ")
             mset = mset[match]
 
-        # now assign metadata depending on what we read
-        niter = len(iterset)
-        self.niter = niter
-        self.nq = len(qvset)
-        self.nr = len(irset)
-        self.nell = len(lset)
-        self.nm = len(mset)
-        self.qv = qvset
-        self.m = mset
-        self.l = lset
-        self.radius = radius[irset]      
-        self.lut = get_lut(qvset)
-
-        # convert from Fortran 1-based to Python 0-based indexing
-        rad_inds = rad_inds[irset]
-        self.rad_inds = rad_inds - 1
-        self.inds = rad_inds
-        
         if (error):
             print(" Returning zero shell spectra data.")
             fd.close()
             return
+
+        niter = len(iterset)
         
         # now read only the records/slices we want
         self.iters = np.zeros(niter,dtype='int32')
         self.time  = np.zeros(niter,dtype='float64')
-        self.vals  = np.zeros((len(lset), self.nm, self.nr, self.nq, niter), dtype='complex128')
+        self.vals  = np.zeros((len(lset), len(mset), len(irset), len(qvset), niter), dtype='complex128')
 
         
         # loop over each record (iteration), then within each record loop over each quantity and radius
@@ -2691,6 +2666,22 @@ class Shell_Spectra:
                 self.vals[:,1:,:,:,:] /= np.sqrt(2.0)
             else:
                 self.vals[:,:,:,:,:] /= np.sqrt(2.0)
+
+
+        # now assign metadata depending on what we read
+        self.niter = niter
+        self.nq = len(qvset)
+        self.nr = len(irset)
+        self.nell = len(lset)
+        self.nm = len(mset)
+        self.qv = qvset
+        self.radius = radius[irset]
+        self.lut = get_lut(self.qv)
+
+        # convert from Fortran 1-based to Python 0-based indexing
+        rad_inds = rad_inds[irset]
+        self.rad_inds = rad_inds - 1
+        self.inds = rad_inds
 
 
         self.lpower  = np.zeros((self.nell, self.nr, self.nq, niter, 3),dtype='float64')
