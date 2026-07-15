@@ -2408,6 +2408,8 @@ class Shell_Spectra:
            lset      : list of harmonic degrees, values running from 0 to lmax
            mset      : list of azimuthal orders, values running from 0 to lmax
         """
+        print("Brads version of Shell_Spectra (init)")
+
         if (filename == 'none'):
             the_file = path+'00000001'
         else:
